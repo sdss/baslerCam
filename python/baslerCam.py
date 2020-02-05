@@ -47,18 +47,33 @@ class BaslerCamera(BaseCamera):
         print("exposure data shape", exposure.data.shape)
         return
 
+
 async def takeOne():
-    cs = BaslerCameraSystem(BaslerCamera)
-    availableCams = cs.list_available_cameras()
-    print("availablecams", availableCams)
-    cam = await cs.add_camera(
-        name=availableCams[0],
-        uid=availableCams[0],
-        autoconnect=False
-    )
-    print("connection params", cam.camera_config.get('connection_params', {}).copy())
-    await cam.connect({"uid": availableCams[0]})
-    print("cam type", type(cam))
+    serialNum = "23197801"
+    config = {
+        'cameras': {
+            'my_camera': {
+                'uid': serialNum
+                'connection_params': {
+                    'uid': serialNum
+                }
+            }
+        }
+    }
+    cs = BaslerCameraSystem(BaslerCamera, camera_config=config)
+    cam = cs.get_camera(uid=serialNum)
+    # cam.connect()
+
+    # availableCams = cs.list_available_cameras()
+    # print("availablecams", availableCams)
+    # cam = await cs.add_camera(
+    #     name=availableCams[0],
+    #     uid=availableCams[0],
+    #     autoconnect=False
+    # )
+    # print("connection params", cam.camera_config.get('connection_params', {}).copy())
+    # await cam.connect({"uid": availableCams[0]})
+    # print("cam type", type(cam))
 
     exp = await cam.expose(0.001)
     exp.write()
