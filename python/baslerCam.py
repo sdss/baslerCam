@@ -1,5 +1,5 @@
 import asyncio
-
+# test
 import numpy
 
 from pypylon import pylon
@@ -26,6 +26,17 @@ class BaslerCamera(BaseCamera):
         info.SetSerialNumber(uid)
         cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice(info))
         cam.Open()
+        # reverse Y so that image in ds9 displays correctly
+        cam.ReverseY = True
+        cam.PixelFormat = "Mono12"
+        cam.Gain = cam.Gain.Min
+        cam.Width = cam.Width.Max
+        cam.Height = cam.Height.Max
+        cam.BinningHorizontal = 2
+        cam.BinningVertical = 2
+        cam.BinningVerticalMode = "Sum"
+        cam.BinningHorizontalMode = "Sum"
+
         self.device = cam
 
     async def _disconnect_internal(self):
@@ -37,7 +48,7 @@ class BaslerCamera(BaseCamera):
         """Expose the camera exptime in seconds
         """
 
-        # basler takes exptime in micro seconds
+        # basler takes exptime in micro second integers
         exptime_ms = int(numpy.floor(exposure.exptime * 1e6))
         self._notify(CameraEvent.EXPOSURE_INTEGRATING)
 
@@ -45,6 +56,21 @@ class BaslerCamera(BaseCamera):
 
         exposure.data = numpy.array(result.Array)
         print("exposure data shape", exposure.data.shape)
+
+        # append headers
+        addHeaders = [
+            ("BinX", self.device.BinningHorizontal, "Horizontal Bin Factor"),
+            ("BinY", self.device.BinningVertical, "Vertical Bin Factor"),
+            ("Gain", self.device.Gain, "Gain [dB]"),
+            ("Width", self.device.Width, "Pixel Columns"),
+            ("Height", self.device.Height, "Pixel Rows"),
+            ("ReverseY", self.device.ReverseY, "Reverse Rows"),
+            ("ReverseX", self.device.ReverseX, "Reverse Columns"),
+            ("VertBinMode", self.device.BinningVerticalMode),
+            ("HorizBinMode", self.device.BinningHorizontalMode)
+        ]
+        for header in addHeaders:
+            exposure.fits_model[0].header_model.append(header)
         return
 
 
@@ -61,8 +87,7 @@ async def takeOne():
         }
     }
     cs = BaslerCameraSystem(BaslerCamera, camera_config=config)
-    await cs.add_camera(uid=serialNum, autoconnect=True)
-    cam = cs.get_camera(uid=serialNum)
+    cam = await cs.add_camera(uid=serialNum, autoconnect=True)
     print("cameras", cs.cameras)
     print("cam", cam)
     # cam.connect()
