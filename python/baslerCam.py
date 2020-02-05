@@ -38,10 +38,10 @@ class BaslerCamera(BaseCamera):
         """
 
         # basler takes exptime in micro seconds
-        exptime_ms = exposure.exptime * 1e6
+        exptime_ms = int(numpy.floor(exposure.exptime * 1e6))
         self._notify(CameraEvent.EXPOSURE_INTEGRATING)
 
-        result = self.device.GrabOne(exptime_ms)
+        result = await self.loop.run_in_executor(None, self.device.GrabOne, exptime_ms)
 
         exposure.data = numpy.array(result.Array)
         print("exposure data shape", exposure.data.shape)
@@ -53,7 +53,7 @@ async def takeOne():
     config = {
         'cameras': {
             'my_camera': {
-                'uid': serialNum
+                'uid': serialNum,
                 'connection_params': {
                     'uid': serialNum
                 }
@@ -61,7 +61,10 @@ async def takeOne():
         }
     }
     cs = BaslerCameraSystem(BaslerCamera, camera_config=config)
+    await cs.add_camera(uid=serialNum, autoconnect=True)
     cam = cs.get_camera(uid=serialNum)
+    print("cameras", cs.cameras)
+    print("cam", cam)
     # cam.connect()
 
     # availableCams = cs.list_available_cameras()
