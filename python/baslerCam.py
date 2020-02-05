@@ -45,8 +45,7 @@ class BaslerCamera(BaseCamera):
         print("exposure data shape", exposure.data.shape)
         return
 
-
-if __name__ == "__main__":
+def takeOne():
     cs = BaslerCameraSystem(BaslerCamera)
     availableCams = cs.list_available_cameras()
     cam = await cs.add_camera(
@@ -59,6 +58,9 @@ if __name__ == "__main__":
     exp = await cam.expose(0.001)
     exp.write()
     print("filename", exp.filename)
+
+if __name__ == "__main__":
+    takeOne()
 
 
 
